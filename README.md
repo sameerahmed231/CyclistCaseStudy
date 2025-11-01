@@ -77,7 +77,6 @@ Attribution is required to both the data provider (**Lyft Inc.**) and the author
 | `data/bike_ride_data.csv` | Cleaned & aggregated dataset |
 | `analysis/cyclistic_case_study.Rmd` | Full R Markdown analysis file |
 | `analysis/cyclistic_case_study.html` | Rendered HTML version of the analysis |
-| `visuals/` | Plots and visuals used in the report |
 | `README.md` | Project overview and documentation |
 
 ---
@@ -86,4 +85,4 @@ Attribution is required to both the data provider (**Lyft Inc.**) and the author
 
 **Sameer Ahmed**  
 Data Science Enthusiast | R, Python, Power BI  
-[LinkedIn](https://www.linkedin.com/in/ahmedsameer01) | [Kaggle](https://www.kaggle.com/ahmedsameer01)
+[LinkedIn](https://www.linkedin.com/in/sameer-ahmed22/) | [Kaggle](https://www.kaggle.com/ahmedsameer01)
