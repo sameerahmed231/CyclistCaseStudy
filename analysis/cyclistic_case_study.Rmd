@@ -1,0 +1,203 @@
+---
+title: "cyclistic_case_study"
+author: "Sameer"
+date: "2025-10-31"
+output:
+  html_document: default
+  pdf_document: default
+---
+### Setting Up Libraries
+
+To begin the analysis, several R packages were loaded to simplify data cleaning, manipulation, and visualization tasks.  
+The **tidyverse** package offers a unified collection of tools for data wrangling and plotting; **scales** helps format large numeric labels.
+
+Together, these libraries create a strong foundation for reproducible data analysis within R Markdown.
+
+
+```{r warning=FALSE}
+library(tidyverse)
+library(scales)
+```
+
+### Data Source, Cleaning, and Aggregation
+
+This analysis uses open-source data from the **Divvy Trip Data** portal provided by Lyft, available at  
+[https://divvy-tripdata.s3.amazonaws.com/index.html](https://divvy-tripdata.s3.amazonaws.com/index.html).
+
+The dataset contains anonymized trip-level information from the Cyclistic bike-share program, covering **October 2024 to September 2025**.  
+Each monthly file includes ride details such as `rideable_type`, `started_at`, `ended_at`, `start_lat`, `end_lat`, and user type (`member_casual`).
+
+Before importing into R, all 12 months of data were **cleaned and aggregated using Power Query in Excel**.  
+The cleaning process involved:
+
+- Removing duplicate and incomplete records (e.g., missing station names or coordinates).
+- Calculating ride duration from `started_at` and `ended_at` timestamps.
+- Extracting temporal features such as **month**, **day of week**, and **hour**.
+- Creating **ride length buckets** (e.g., 0–15, 15–30, 30–60 minutes) to group similar trips.
+- Aggregating data by key attributes such as user type, ride type, and time intervals to reduce file size and improve processing speed.
+
+The resulting aggregated dataset provides a comprehensive yet compact view of usage patterns suitable for exploratory analysis in R Markdown.
+
+**Data Credit:**  
+Data used in this analysis is made available by Lyft Inc. through the [Divvy Trip Data](https://divvy-tripdata.s3.amazonaws.com/index.html) platform under an open data license. All rights and ownership remain with the original provider.
+
+### Importing the Aggregated Dataset
+
+The aggregated dataset used in this analysis combines 12 months of Cyclistic trip data, previously cleaned and summarized in Excel Power Query.  
+Each record represents a unique combination of user type, rideable type, month, day of week, hour, and ride length bucket, along with aggregated ride counts and average ride durations.
+
+This structure significantly reduces data volume while preserving analytical depth, allowing efficient exploration of user behaviors and seasonal trends.
+
+```{r}
+data <- read_csv("C:/Users/Sameer/Downloads/Data Analysis/Google Data Analytics/Capstone Project/bike_ride_data.csv")
+glimpse(data)
+```
+
+### Data Sanity Checks
+
+Before beginning the analysis, several data validation steps were performed:
+- Confirmed that only two **member types** (`member` and `casual`) exist.
+- Verified **rideable_type** contains two valid bike types (classic and electric).
+- Checked for outliers in `avg_ride_length` and `total_rides`.
+- Confirmed hourly values ranged correctly from 0–23.
+
+This ensured data integrity and consistency for subsequent analysis.
+
+```{r}
+summary(data)
+n_distinct(data$member_type)
+n_distinct(data$rideable_type)
+```
+
+### Descriptive Analysis
+
+The descriptive phase explores basic usage patterns and differences between members and casual riders.
+#### A. Total Rides by Member Type
+
+This visualization reveals the overall ride volume distribution between user types.  
+**Members** dominate total ridership, indicating consistent usage — likely for daily commuting or short trips.  
+**Casual riders**, while fewer, represent significant activity that could be converted into memberships with the right incentives.
+
+```{r}
+data %>%
+  group_by(member_type) %>%
+  summarise(total_rides = sum(total_rides)) %>%
+  ggplot(aes(x = member_type, y = total_rides, fill = member_type)) +
+  geom_bar(stat = "identity") + scale_y_continuous(labels = comma) +
+  labs(title = "Total Rides by Member Type", x = "User Type", y = "Number of Rides") +
+  theme_minimal()
+```
+
+#### B. Average Ride Length by Member Type
+
+This plot shows that **casual users spend more time per ride** than members as total rides for members are more than casual users but the average ride duration for both are almost similar.  
+While members focus on short, frequent rides, casual users tend to engage in longer, leisurely rides — possibly during weekends or social outings.  
+This insight is key for designing targeted promotional strategies.
+
+```{r}
+data %>%
+  group_by(member_type) %>%
+  summarise(avg_length = mean(avg_ride_length)) %>%
+  ggplot(aes(x = member_type, y = avg_length, fill = member_type)) +
+  geom_col() +
+  labs(title = "Average Ride Length by Member Type", x = "User Type", y = "Average Minutes") +
+  theme_minimal()
+
+```
+
+### Time-Based Trends
+
+#### A. Rides by Day of Week
+
+Weekday vs. weekend analysis highlights behavioral contrasts:
+- **Members** have higher ridership on weekdays, suggesting routine or commute-based usage.
+- **Casual riders** peak on weekends, reflecting recreational patterns.
+
+This clear separation reinforces the notion that Cyclistic’s user base splits between commuters and leisure users.
+
+```{r}
+data %>%
+  group_by(member_type, day_of_week) %>%
+  summarise(total_rides = sum(total_rides)) %>%
+  ggplot(aes(x = fct_relevel(day_of_week, c("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")),
+             y = total_rides, fill = member_type)) +
+  geom_col(position = "dodge") + scale_y_continuous(labels = comma) +
+  labs(title = "Rides by Day of Week", x = "Day", y = "Number of Rides") +
+  theme_minimal()
+```
+
+#### B. Rides by Hour
+
+Hourly trends further support these findings.  
+Members exhibit two sharp peaks — one around **8 AM** and another near **6 PM** — aligning with commuting times.  
+Casual users’ activity, however, clusters between **12 PM and 5 PM**, consistent with afternoon leisure rides.  
+Such insights are crucial for resource allocation, bike availability, and station management throughout the day.
+
+```{r}
+data %>%
+  group_by(member_type, hour) %>%
+  summarise(total_rides = sum(total_rides)) %>%
+  ggplot(aes(x = hour, y = total_rides, color = member_type)) +
+  geom_line(size = 1.2) + scale_y_continuous(labels = comma) +
+  labs(title = "Rides by Hour of Day", x = "Hour (24h format)", y = "Rides") +
+  theme_minimal()
+```
+
+### Seasonal Trends
+
+This visualization explores ridership patterns across months.  
+Both user types show strong seasonality, with ride counts peaking during **summer months** (June–August) and dropping significantly in **winter**.  
+Casual riders display more pronounced seasonality — reflecting fair-weather leisure rides — while members maintain steadier engagement year-round.
+
+Understanding these trends helps Cyclistic plan maintenance, marketing campaigns, and membership drives in alignment with seasonal fluctuations.
+
+
+```{r}
+data %>%
+  group_by(member_type, month) %>%
+  summarise(total_rides = sum(total_rides)) %>%
+  ggplot(aes(x = month, y = total_rides, group = member_type, color = member_type)) +
+  geom_line(size = 1.3) + scale_y_continuous(labels = comma) +
+  labs(title = "Seasonal Ride Trends", x = "Month", y = "Number of Rides") +
+  theme_minimal()
+```
+
+### Insights and Discussion
+
+1. **Rider Composition and Behavior**  
+   Members account for the majority of total rides, reflecting established, habitual use — likely for daily commuting or consistent travel needs.  
+   Casual users, though smaller in number, take longer rides, implying leisure or tourism-driven activity.
+
+2. **Temporal Usage Patterns**  
+   Members’ weekday peaks at 8 AM and 6 PM clearly align with work commute schedules.  
+   Casual riders dominate weekend and midday activity, often riding during daylight and warmer hours.
+
+3. **Seasonal Variation**  
+   Both groups ride more in summer, but casual riders show a steeper seasonal curve.  
+   Winter months present opportunities for member retention strategies and off-season engagement offers.
+
+
+**Overall Interpretation:**  
+Cyclistic’s dual audience reflects two distinct behavioral groups:
+- **Members = Consistency & Commuting**
+- **Casuals = Leisure & Exploration**
+
+This segmentation underscores the importance of **customized marketing and operational strategies** to drive membership growth and retention.
+
+
+### Recommendations
+
+1. **Membership Conversion Campaigns:**  
+   Incentivize frequent casual riders through discounted first-month memberships or ride bundles.
+
+2. **Weekend and Tourist Promotions:**  
+   Launch limited-time passes and partnerships with tourist destinations to attract leisure users.
+
+3. **Operational Adjustments:**  
+   Optimize bike distribution to align with morning/evening peaks for members and midday peaks for casual users.
+
+4. **Seasonal Marketing:**  
+   Focus advertising in spring and early summer when casual ridership begins to rise.
+
+By tailoring its strategy to these insights, Cyclistic can increase overall engagement and encourage casual riders to become long-term members.
+
